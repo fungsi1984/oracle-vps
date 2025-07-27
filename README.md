@@ -45,7 +45,62 @@ Congratulations, all simulated renewals succeeded:
   /etc/letsencrypt/live/diacritics.xyz/fullchain.pem (success)
 
 
+
 ```
+### nginx conf, /etc/nginx/sites-available/diacritics.xyz
+```
+server {
+    listen 80;
+    listen [::]:80;
+    server_name diacritics.xyz www.diacritics.xyz;
+    
+    return 301 https://diacritics.xyz$request_uri;
+}
+
+# HTTPS server block - main site
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name diacritics.xyz;
+
+    # Real Let's Encrypt certificates
+    ssl_certificate /etc/letsencrypt/live/diacritics.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/diacritics.xyz/privkey.pem;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    root /var/www/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi.conf;
+    }
+}
+
+# HTTPS server block - www redirect
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name www.diacritics.xyz;
+
+    # Real Let's Encrypt certificates
+    ssl_certificate /etc/letsencrypt/live/diacritics.xyz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/diacritics.xyz/privkey.pem;
+
+    return 301 https://diacritics.xyz$request_uri;
+}
+
+```
+
 
 
 ### configure for cloudflare
